@@ -33,6 +33,8 @@ import java.util.zip.ZipOutputStream;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import io.javalin.http.InternalServerErrorResponse;
+import net.fabricmc.meta.FabricMeta;
 import org.apache.commons.io.IOUtils;
 
 import net.fabricmc.meta.utils.LoaderMeta;
@@ -104,11 +106,22 @@ public class ProfileHandler {
 		return new ByteArrayInputStream(jsonObject.toString().getBytes());
 	}
 
+	private static final String MINECRAFT_MAVEN_URL = "https://libraries.minecraft.net/";
+
 	//This is based of the installer code.
 	private static JsonObject buildProfileJson(LoaderInfoV2 info, String side) {
 		JsonObject launcherMeta = info.getLauncherMeta();
 
-		String profileName = String.format("fabric-loader-%s-%s", info.getLoader().getVersion(), info.getIntermediary().getVersion());
+		String minecraftVersion = info.getIntermediary().getVersion();
+		JsonObject versionMeta;
+
+		try {
+			versionMeta = FabricMeta.database.launcherMeta.get(minecraftVersion).getVersionMeta();
+		} catch (IOException e) {
+			throw new InternalServerErrorResponse("Failed to get minecraft version meta");
+		}
+
+		String profileName = String.format("fabric-loader-%s-%s", info.getLoader().getVersion(), minecraftVersion);
 
 		JsonObject librariesObject = launcherMeta.get("libraries").getAsJsonObject();
 		// Build the libraries array with the existing libs + loader and intermediary
@@ -120,11 +133,24 @@ public class ProfileHandler {
 			libraries.addAll(librariesObject.get(side).getAsJsonArray());
 		}
 
+		// Cursed compatibility with cursed
+		libraries.add(getLibrary("babric:log4j-config:1.0.0", LoaderMeta.MAVEN_URL));
+		libraries.add(getLibrary("net.minecrell:terminalconsoleappender:1.2.0", "https://repo1.maven.org/maven2/"));
+		libraries.add(getLibrary("org.slf4j:slf4j-api:1.8.0-beta4", MINECRAFT_MAVEN_URL));
+		libraries.add(getLibrary("org.apache.logging.log4j:log4j-slf4j18-impl:2.16.0", MINECRAFT_MAVEN_URL));
+		libraries.add(getLibrary("org.apache.logging.log4j:log4j-api:2.16.0", MINECRAFT_MAVEN_URL));
+		libraries.add(getLibrary("org.apache.logging.log4j:log4j-core:2.16.0", MINECRAFT_MAVEN_URL));
+		libraries.add(getLibrary("com.google.code.gson:gson:2.8.9", MINECRAFT_MAVEN_URL));
+		libraries.add(getLibrary("com.google.guava:guava:31.0.1-jre", MINECRAFT_MAVEN_URL));
+		libraries.add(getLibrary("org.apache.commons:commons-lang3:3.12.0", MINECRAFT_MAVEN_URL));
+		libraries.add(getLibrary("commons-io:commons-io:2.11.0", MINECRAFT_MAVEN_URL));
+		libraries.add(getLibrary("commons-codec:commons-codec:1.15", MINECRAFT_MAVEN_URL));
+
 		String currentTime = ISO_8601.format(new Date());
 
 		JsonObject profile = new JsonObject();
 		profile.addProperty("id", profileName);
-		profile.addProperty("inheritsFrom", info.getIntermediary().getVersion());
+		profile.addProperty("inheritsFrom", minecraftVersion);
 		profile.addProperty("releaseTime", currentTime);
 		profile.addProperty("time", currentTime);
 		profile.addProperty("type", "release");
@@ -142,13 +168,28 @@ public class ProfileHandler {
 
 		JsonObject arguments = new JsonObject();
 
-		// I believe this is required to stop the launcher from complaining
-		arguments.add("game", new JsonArray());
+		JsonArray gameArgs = new JsonArray();
+
+		if (side.equals("client")) {
+			JsonElement minecraftArguments = versionMeta.get("minecraftArguments");
+			if (minecraftArguments != null) {
+				for (String arg : minecraftArguments.getAsString().split(" ")) {
+					gameArgs.add(arg);
+				}
+			}
+		}
+
+		arguments.add("game", gameArgs);
 
 		if (side.equals("client")) {
 			// add '-DFabricMcEmu= net.minecraft.client.main.Main ' to emulate vanilla MC presence for programs that check the process command line (discord, nvidia hybrid gpu, ..)
 			JsonArray jvmArgs = new JsonArray();
 			jvmArgs.add("-DFabricMcEmu= net.minecraft.client.main.Main ");
+
+			jvmArgs.add("-cp");
+			jvmArgs.add("${classpath}");
+			jvmArgs.add("-Djava.library.path=${natives_directory}");
+
 			arguments.add("jvm", jvmArgs);
 		}
 

@@ -30,7 +30,7 @@ import java.net.URL;
 public class LoaderMeta {
 
 	public static final File BASE_DIR = new File("metadata");
-	public static final String MAVEN_URL = "https://maven.fabricmc.net/";
+	public static final String MAVEN_URL = "https://maven.glass-launcher.net/babric/";
 
 	public static JsonObject getMeta(LoaderInfoBase loaderInfo){
 		String loaderMaven = loaderInfo.getLoader().getMaven();

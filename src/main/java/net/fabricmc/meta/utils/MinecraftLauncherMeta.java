@@ -18,6 +18,7 @@ package net.fabricmc.meta.utils;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
@@ -62,16 +63,25 @@ public class MinecraftLauncherMeta {
 	}
 
 	public boolean isStable(String id) {
-		return versions.stream().anyMatch(version -> version.id.equals(id) && version.type.equals("release"));
+		return versions.stream().anyMatch(version -> version.id.equals(id) && version.type.equals("release") || version.type.startsWith("old_"));
 	}
 
-	public int getIndex(String version){
+	public int getIndex(String version) {
 		for (int i = 0; i < versions.size(); i++) {
-			if(versions.get(i).id.equals(version)){
+			if (versions.get(i).id.equals(version)) {
 				return i;
 			}
 		}
 		return 0;
+	}
+
+	public Version get(String versionId) {
+		for (Version version : versions) {
+			if (version.id.equals(versionId)) {
+				return version;
+			}
+		}
+		return null;
 	}
 
 	public List<Version> getVersions() {
@@ -85,6 +95,8 @@ public class MinecraftLauncherMeta {
 		String url;
 		String time;
 		String releaseTime;
+
+		private JsonObject versionMeta = null;
 
 		public String getId() {
 			return id;
@@ -104,6 +116,15 @@ public class MinecraftLauncherMeta {
 
 		public String getReleaseTime() {
 			return releaseTime;
+		}
+
+		public JsonObject getVersionMeta() throws IOException {
+			if (versionMeta == null) {
+				String json = IOUtils.toString(new URL(this.url), StandardCharsets.UTF_8);
+				versionMeta = GSON.fromJson(json, JsonObject.class);
+			}
+
+			return versionMeta;
 		}
 	}
 
