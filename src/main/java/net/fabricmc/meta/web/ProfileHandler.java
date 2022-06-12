@@ -147,10 +147,12 @@ public class ProfileHandler {
 		libraries.add(getLibrary("commons-codec:commons-codec:1.15", MINECRAFT_MAVEN_URL));
 
 		// Use babric lwjgl
-		for (JsonElement library : versionMeta.getAsJsonArray("libraries")) {
-			String name = library.getAsJsonObject().get("name").getAsString();
-			if (name.contains("lwjgl") && name.contains("-babric.")) {
-				libraries.add(library);
+		if (side.equals("client")) {
+			for (JsonElement library : versionMeta.getAsJsonArray("libraries")) {
+				String name = library.getAsJsonObject().get("name").getAsString();
+				if (name.contains("lwjgl") && name.contains("-babric.")) {
+					libraries.add(library);
+				}
 			}
 		}
 
