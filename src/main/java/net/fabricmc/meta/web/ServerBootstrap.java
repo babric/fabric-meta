@@ -22,6 +22,7 @@ import io.javalin.http.Context;
 import io.javalin.http.Handler;
 import io.javalin.http.InternalServerErrorResponse;
 import net.fabricmc.meta.FabricMeta;
+import net.fabricmc.meta.data.VersionDatabase;
 import net.fabricmc.meta.web.models.BaseVersion;
 import org.apache.commons.io.FileUtils;
 
@@ -158,7 +159,7 @@ public class ServerBootstrap {
     }
 
     private static Path downloadInstallerJar(Path jar, String installerVersion) throws IOException {
-        final String url = String.format("https://maven.fabricmc.net/net/fabricmc/fabric-installer/%1$s/fabric-installer-%1$s-server.jar", installerVersion);
+        final String url = String.format(VersionDatabase.MAVEN_URL + "babric/fabric-installer/%1$s/fabric-installer-%1$s-server.jar", installerVersion);
 
         System.out.println("Downloading: " + url);
         FileUtils.copyURLToFile(new URL(url), jar.toFile());
