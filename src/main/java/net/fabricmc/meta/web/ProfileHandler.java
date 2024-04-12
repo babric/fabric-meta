@@ -133,6 +133,11 @@ public class ProfileHandler {
 			libraries.addAll(librariesObject.get(side).getAsJsonArray());
 		}
 
+		// Make sure old versions of asm are excluded
+		JsonObject exclusionRule = new JsonObject();
+		exclusionRule.addProperty("action", "disallow");
+		libraries.add(getLibrary("org.ow2.asm:asm-all:*", "https://repo1.maven.org/maven2/", exclusionRule));
+
 		// Cursed compatibility with cursed
 		libraries.add(getLibrary("babric:log4j-config:1.0.0", LoaderMeta.MAVEN_URL));
 		libraries.add(getLibrary("net.minecrell:terminalconsoleappender:1.2.0", "https://repo1.maven.org/maven2/"));
@@ -214,6 +219,18 @@ public class ProfileHandler {
 		JsonObject jsonObject = new JsonObject();
 		jsonObject.addProperty("name", mavenPath);
 		jsonObject.addProperty("url", url);
+		return jsonObject;
+	}
+
+	private static JsonObject getLibrary(String mavenPath, String url, JsonObject... rules) {
+		JsonObject jsonObject = getLibrary(mavenPath, url);
+
+		JsonArray jsonArray  = new JsonArray();
+		for (JsonObject rule : rules) {
+			jsonArray.add(rule);
+		}
+
+		jsonObject.add("rules", jsonArray);
 		return jsonObject;
 	}
 }
